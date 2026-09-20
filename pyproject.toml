@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kairos-factor"
+version = "0.1.0"
+description = "Kairos Factor —— 自研轻量因子研究库（预处理 / IC / 分层 / 衰减 / 流水线）"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Bruce848647703" }]
+keywords = ["quant", "factor", "alpha", "research", "ic"]
+dependencies = [
+    "numpy>=1.21",
+    "pandas>=1.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools]
+packages = ["kairos_factor"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
