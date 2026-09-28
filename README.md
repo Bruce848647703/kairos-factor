@@ -21,6 +21,9 @@
   保证研究/生产预处理一致。
 - **合成数据 `sim`**：`make_factor_and_returns` 生成与远期收益具有**可控真实 IC** 的
   因子面板，示例与测试全部离线、固定 seed 可复现。
+- **真实数据 `realdata`**：`load_close_panel` 从本地 CSV 目录读出对齐的 A 股收盘价面板
+  （非正价→NaN→历史 ffill→按全体上市日裁剪），配套前复权伪影筛查与行业标签构造，
+  完全离线；`examples/real_factor_study.py` 用它在真实行情上出研究报告。
 - **逐截面变换**：所有预处理只使用当期截面信息，不引入任何跨期数据。
 
 ## 安装
@@ -55,6 +58,43 @@ print(report.decay)                      # IC 随期限衰减
 
 完整可运行示例见 [`examples/demo.py`](examples/demo.py)。
 
+## 真实数据因子研究
+[`examples/real_factor_study.py`](examples/real_factor_study.py) 在**真实 A 股日线**上跑完整链路：
+加载价格 → 构造因子（60日动量 / 20日动量 / 5日反转 / 低波动）→ `FactorPipeline` 预处理
+（winsorize + zscore，可选行业中性化）→ `forward_returns` + `rank_ic` / `ic_summary` /
+`quantile_returns` / `decay_analysis`（`FactorReport`）→ 落盘中文报告。结论由数据说话，
+弱就写弱，不做美化。
+
+```bash
+python examples/real_factor_study.py --data-dir /path/to/ashare_csv_dir
+# 可选参数：--horizon 5 --quantiles 5 --decay-horizons 1,2,5,10,20
+#           --max-daily-move 0.30 --out-dir research/real_factor
+```
+
+产物（默认写入 `research/real_factor/`，报告与小 CSV 随仓库入库）：
+
+| 文件 | 内容 |
+|---|---|
+| `REPORT.md` | 每个因子的 IC 均值 / ICIR / t 值（重叠 + 非重叠两种口径）/ IC>0 占比 / 分层收益 / IC 衰减、数据质量处理说明、诚实结论与局限 |
+| `factor_ic.csv` | 因子 × 样本 × 预处理 的全部标量指标（含各期限衰减） |
+| `quantile_returns.csv` | 分层组合与多空（LS）的均值、年化、胜率、期数 |
+
+数据加载器 `kairos_factor.realdata`（只读本地 CSV，不联网）：
+
+- `load_close_panel(data_dir, drop_incomplete=True)`：`<symbol>.csv` 目录 → 收盘价面板
+  （index=交易日, columns=symbol）。口径与本系列其它加载器一致：非正价（停牌记 0、
+  前复权累计调整失真为负）→ NaN → 历史 ffill（无未来函数）；`drop_incomplete=True` 时
+  裁掉「任一标的尚未上市」的早期行。
+- `artifact_flags` / `clean_start` / `drop_artifact_symbols` / `flagged_symbols`：
+  前复权价格趋零会造成数倍乃至数十倍的**伪涨跌**（本池 4 只高分红标的即如此），
+  用「|单日涨跌| > 30%（远超 A 股 ±10%/±20% 涨跌停）」筛查，并给出两个互补样本
+  （全体标的·共同可信起点 / 剔除失真标的·完整窗口）检验结论是否依赖窗口。
+- `sector_labels(index, columns)`：行业分组 → 可直接喂给 `neutralize` 的行业标签面板。
+
+**数据声明**：示例行情来自公开行情接口的前复权日线，仅用于研究与教学演示，
+版权归原作者 / 数据源所有，不用于商业用途，不主张对数据本身的所有权；数据不保证准确完整，
+报告中的一切数字均为**样本内历史统计特征，不构成投资建议**。
+
 ## API 概览
 | 模块 | 关键对象 | 说明 |
 |---|---|---|
@@ -63,6 +103,7 @@ print(report.decay)                      # IC 随期限衰减
 | `evaluation` | `forward_returns` `decay_analysis` `FactorReport` | 远期收益推算 / IC 衰减 / 报告 |
 | `pipeline` | `FactorPipeline` `PipelineStep` | 链式变换流水线 |
 | `sim` | `make_factor_and_returns` `make_style_exposures` | 可控 IC 的合成数据 |
+| `realdata` | `load_close_panel` `artifact_flags` `clean_start` `drop_artifact_symbols` `flagged_symbols` `sector_labels` | 真实 A 股行情加载 / 前复权伪影筛查 / 行业标签（离线） |
 
 ## 设计要点
 - **防未来函数**：因子行 `t` 只与「`t` 之后实现」的远期收益配对；`forward_returns`
@@ -82,9 +123,10 @@ make test          # 或 python -m pytest -q
 
 ## 项目结构
 ```
-kairos_factor/      核心包（preprocess / metrics / evaluation / pipeline / sim）
-examples/           可运行示例
-tests/              pytest 测试
+kairos_factor/      核心包（preprocess / metrics / evaluation / pipeline / sim / realdata）
+examples/           可运行示例（demo.py 合成数据 / real_factor_study.py 真实数据）
+tests/              pytest 测试（全部离线）
+research/           示例产出的研究结果（real_factor/ 报告与 CSV 入库）
 ```
 
 ## 许可
