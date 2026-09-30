@@ -1,5 +1,7 @@
 # Kairos Factor
 
+[![CI](https://github.com/Bruce848647703/kairos-factor/actions/workflows/ci.yml/badge.svg)](https://github.com/Bruce848647703/kairos-factor/actions/workflows/ci.yml)
+
 > Kairos 量化系列的因子研究模块 —— 一个**自研、轻量、零重型依赖**的 Python 因子/Alpha 分析库。
 
 `kairos_factor` 覆盖单因子研究的完整链路：预处理（去极值/标准化/中性化）→ 评价指标
