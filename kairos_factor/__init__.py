@@ -34,7 +34,7 @@ from .preprocess import (
 )
 from .sim import make_factor_and_returns, make_style_exposures
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "winsorize", "zscore", "rank_normalize", "fill_cross_section", "neutralize",
